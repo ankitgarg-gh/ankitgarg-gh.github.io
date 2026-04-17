@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Pipelines in Regulated Industries - Ankit Garg</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<nav class="nav">
+    <div class="nav-content">
+        <a href="../index.html" class="nav-logo">Ankit Garg</a>
+        <div class="nav-links">
+            <a href="../index.html">About</a>
+            <a href="../blog.html">Writing</a>
+            <a href="../resume.pdf">Resume</a>
+        </div>
+    </div>
+</nav>
+
+<article class="post">
+    <header class="post-header">
+        <h1>Real-Time Pipelines in Regulated Industries</h1>
+        <time datetime="2024-11">November 2024</time>
+    </header>
+
+    <div class="post-content">
+        <h2>Context</h2>
+        <p>Building streaming systems is hard. Building them in regulated finance, healthcare, or government adds constraints that change your architecture fundamentally.</p>
+        <p>I spent five years building real-time data infrastructure in investment banking. The technical challenges were interesting, but the regulatory requirements shaped more decisions than any performance benchmark.</p>
+
+        <h2>What Makes Regulated Different</h2>
+
+        <h3>1. Audit Everything</h3>
+        <p>Every data access, transformation, and output must be traceable. Not just logged—provably traceable.</p>
+        <p>This means:</p>
+        <ul>
+            <li>Immutable audit logs (append-only, tamper-evident)</li>
+            <li>Correlation IDs through entire pipeline</li>
+            <li>Retention policies that match regulatory windows (often 7+ years)</li>
+        </ul>
+
+        <pre><code>Event arrives   → Log receipt with timestamp, source, hash
+Event processed → Log transformation applied, input hash, output hash
+Event delivered → Log destination, delivery confirmation, timestamp</code></pre>
+
+        <p>This isn't optional logging for debugging. It's evidence for regulators.</p>
+
+        <h3>2. Exactly-Once Matters More</h3>
+        <p>In ad-tech, processing an event twice means a slightly inflated count. In finance, processing a transaction twice means real money moves incorrectly.</p>
+        <p>Kafka's exactly-once semantics (EOS) are necessary but not sufficient. Your entire pipeline needs idempotency:</p>
+
+        <pre><code class="language-java">// Idempotent write pattern
+public void processTransaction(Transaction txn) {
+    String idempotencyKey = txn.getId() + "-" + txn.getVersion();
+
+    if (processedTransactions.contains(idempotencyKey)) {
+        log.info("Skipping duplicate: {}", idempotencyKey);
+        return;
+    }
+
+    // Process within transaction
+    try {
+        db.beginTransaction();
+        db.markProcessed(idempotencyKey);
+        db.applyTransaction(txn);
+        db.commit();
+    } catch (Exception e) {
+        db.rollback();
+        throw e;
+    }
+}</code></pre>
+
+        <h3>3. Late Data Has Legal Implications</h3>
+        <p>Stream processing frameworks have concepts of watermarks and late data handling. Usually, you configure a grace period—events arriving after the window closes are dropped or sent to a side output.</p>
+        <p>In regulated contexts, you often cannot drop late data. A trade that arrives late still happened. It needs to be recorded, reconciled, and potentially trigger corrections to previously published results.</p>
+        <p>This means:</p>
+        <ul>
+            <li>Longer grace periods (higher latency)</li>
+            <li>Reprocessing capabilities (rebuild outputs from source)</li>
+            <li>Correction events (amendments, not overwrites)</li>
+        </ul>
+
+        <h3>4. Data Residency Is Real</h3>
+        <p>GDPR, data localization laws, and internal policies mean you can't always send data where you want.</p>
+        <p>Architecture implications:</p>
+        <ul>
+            <li>Regional Kafka clusters (not global replication)</li>
+            <li>Processing must happen in-region</li>
+            <li>Cross-region aggregations require anonymization or legal frameworks</li>
+        </ul>
+
+        <h2>Architecture Pattern That Worked</h2>
+
+        <pre><code>┌─────────────────────────────────────────────────────────────┐
+│                     Source Systems                           │
+│              (Trading, Orders, Market Data)                  │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     Kafka Cluster                            │
+│         (Partitioned by entity, compacted topics            │
+│          for state, regular topics for events)              │
+└─────────────────────────────────────────────────────────────┘
+                              │
+              ┌───────────────┼───────────────┐
+              ▼               ▼               ▼
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│ Stream Processor│ │ Stream Processor│ │ Stream Processor│
+│   (Validation)  │ │  (Enrichment)   │ │ (Aggregation)   │
+└─────────────────┘ └─────────────────┘ └─────────────────┘
+              │               │               │
+              ▼               ▼               ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     Delta Lake                               │
+│         (Bronze: raw, Silver: validated,                     │
+│          Gold: aggregated, Audit: immutable log)            │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│              Reporting & Regulatory Feeds                    │
+└─────────────────────────────────────────────────────────────┘</code></pre>
+
+        <p><strong>Delta Lake was the right choice here.</strong> ACID transactions on the lake meant we could handle late arrivals with proper upserts. Time travel meant we could reproduce any historical state for audits. Schema enforcement meant bad data didn't corrupt downstream.</p>
+
+        <h2>Latency vs Compliance Tradeoff</h2>
+        <p>The business wanted sub-second latency. Compliance wanted bulletproof audit trails. These goals conflict.</p>
+        <p>The compromise:</p>
+        <ul>
+            <li><strong>Hot path</strong>: Sub-second for operational use (in-memory state, async persistence)</li>
+            <li><strong>Warm path</strong>: Seconds for audit-ready writes (transactional commits to lake)</li>
+            <li><strong>Reconciliation</strong>: Continuous comparison between hot and warm to catch drift</li>
+        </ul>
+        <p>This added complexity but satisfied both stakeholders.</p>
+
+        <h2>Key Lessons</h2>
+        <ol>
+            <li><strong>Start with compliance requirements, not performance benchmarks.</strong> The regulatory constraints are non-negotiable. Performance can be optimized within those bounds.</li>
+            <li><strong>Immutability is your friend.</strong> Append-only data models make audits trivial. You never have to explain what data looked like before an update because you never update in place.</li>
+            <li><strong>Build reprocessing capability from day one.</strong> You will need to rebuild outputs from source. If your pipeline can't replay history, you've built yourself into a corner.</li>
+            <li><strong>Invest in observability.</strong> When a regulator asks why a particular output was produced, you need to answer definitively. Distributed tracing and comprehensive logging aren't optional.</li>
+        </ol>
+    </div>
+
+    <footer class="post-footer">
+        <a href="../blog.html">← Back to Writing</a>
+    </footer>
+</article>
+
+<footer class="footer">
+    <p>© 2024 Ankit Garg</p>
+</footer>
+</body>
+</html>

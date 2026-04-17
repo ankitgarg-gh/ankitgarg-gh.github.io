@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Writing - Ankit Garg</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav class="nav">
+    <div class="nav-content">
+        <a href="index.html" class="nav-logo">Ankit Garg</a>
+        <div class="nav-links">
+            <a href="index.html">About</a>
+            <a href="blog.html" class="active">Writing</a>
+            <a href="resume.pdf">Resume</a>
+        </div>
+    </div>
+</nav>
+
+<main class="main">
+    <section class="hero">
+        <h1>Writing</h1>
+        <p class="tagline">Technical notes on data infrastructure, distributed systems, and engineering decisions.</p>
+    </section>
+
+    <section>
+        <ul class="posts">
+            <li>
+                <a href="blog/post1.html">Designing a Data-as-a-Service Layer for Billion-Scale Events</a>
+                <time>December 2024</time>
+                <p>Architecture patterns for exposing petabyte-scale data through containerized microservices with sub-second latency.</p>
+            </li>
+            <li>
+                <a href="blog/post2.html">Real-Time Pipelines in Regulated Industries</a>
+                <time>November 2024</time>
+                <p>Building streaming infrastructure with immutable audit trails, exactly-once semantics, and compliance requirements.</p>
+            </li>
+            <li>
+                <a href="blog/post3.html">Batch vs Stream: A Decision Framework</a>
+                <time>October 2024</time>
+                <p>A practical matrix for choosing between Spark Batch, Flink, and Structured Streaming based on latency, completeness, and operational maturity.</p>
+            </li>
+        </ul>
+    </section>
+</main>
+
+<footer class="footer">
+    <p>© 2024 Ankit Garg</p>
+</footer>
+</body>
+</html>

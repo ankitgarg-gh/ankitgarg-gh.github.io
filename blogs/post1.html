@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Designing a Data-as-a-Service Layer - Ankit Garg</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<nav class="nav">
+    <div class="nav-content">
+        <a href="../index.html" class="nav-logo">Ankit Garg</a>
+        <div class="nav-links">
+            <a href="../index.html">About</a>
+            <a href="../blog.html">Writing</a>
+            <a href="../resume.pdf">Resume</a>
+        </div>
+    </div>
+</nav>
+
+<article class="post">
+    <header class="post-header">
+        <h1>Designing a Data-as-a-Service Layer for Billion-Scale Events</h1>
+        <time datetime="2024-12">December 2024</time>
+    </header>
+
+    <div class="post-content">
+        <h2>The Problem</h2>
+        <p>When you're processing billions of events daily, the traditional approach of giving teams direct access to data lakes creates problems. Query costs spiral. Teams write inefficient queries. The same data gets scanned repeatedly by different consumers.</p>
+        <p>The alternative—building bespoke pipelines for each consumer—doesn't scale either. You end up with dozens of point-to-point integrations, each with its own maintenance burden.</p>
+        <p>Data-as-a-Service (DaaS) sits in the middle: a managed API layer that abstracts the underlying storage while providing controlled, efficient access patterns.</p>
+
+        <h2>Architecture Overview</h2>
+        <p>The system I'll describe serves approximately 5 billion events per day through a combination of REST and gRPC APIs. The underlying data lives in a combination of Hive tables on GCS and hot data in managed caches.</p>
+
+        <pre><code>┌─────────────────────────────────────────────────────────────┐
+│                      API Gateway                             │
+│              (Authentication, Rate Limiting)                 │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   Service Mesh (GKE)                         │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
+│  │ Query Svc   │  │ Stream Svc  │  │ Metadata    │         │
+│  │ (REST/gRPC) │  │ (gRPC)      │  │ Service     │         │
+│  └─────────────┘  └─────────────┘  └─────────────┘         │
+└─────────────────────────────────────────────────────────────┘
+                              │
+              ┌───────────────┼───────────────┐
+              ▼               ▼               ▼
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│  Redis Cluster  │ │ Materialized    │ │  Hive / GCS     │
+│  (Hot Data)     │ │ Views (BigQuery)│ │  (Cold Data)    │
+└─────────────────┘ └─────────────────┘ └─────────────────┘</code></pre>
+
+        <h2>Key Design Decisions</h2>
+
+        <h3>1. REST vs gRPC: Use Both</h3>
+        <p>The debate between REST and gRPC often misses the point. They serve different use cases:</p>
+        <ul>
+            <li><strong>REST</strong>: Better for ad-hoc queries, debugging, integration with external systems that expect HTTP/JSON</li>
+            <li><strong>gRPC</strong>: Better for high-throughput streaming, internal service-to-service communication, when you control both ends</li>
+        </ul>
+        <p>We expose both. The Query Service accepts REST requests for point lookups and bounded queries. The Stream Service uses gRPC for consumers that need continuous data feeds.</p>
+
+        <pre><code class="language-protobuf">// Stream service definition
+service EventStream {
+  rpc Subscribe(SubscribeRequest) returns (stream Event);
+  rpc GetCheckpoint(CheckpointRequest) returns (Checkpoint);
+}
+
+message SubscribeRequest {
+  string topic = 1;
+  string consumer_group = 2;
+  Checkpoint start_from = 3;
+}</code></pre>
+
+        <h3>2. Caching Strategy: Tiered by Access Pattern</h3>
+        <p>Not all data is accessed equally. We use three tiers:</p>
+        <ul>
+            <li><strong>Hot (Redis)</strong>: Last 24 hours, most-accessed entities. Sub-millisecond reads.</li>
+            <li><strong>Warm (Materialized Views)</strong>: Pre-aggregated data in BigQuery. Seconds for complex queries.</li>
+            <li><strong>Cold (Hive/GCS)</strong>: Full history. Minutes for large scans.</li>
+        </ul>
+        <p>The Query Service routes requests to the appropriate tier based on the query pattern and freshness requirements.</p>
+
+        <pre><code class="language-java">public QueryResult executeQuery(Query query) {
+    // Check if data is in hot cache
+    if (isHotQuery(query)) {
+        return redisClient.get(query.getCacheKey());
+    }
+
+    // Check if we have a materialized view
+    MaterializedView view = viewRegistry.findView(query);
+    if (view != null && view.isFresh(query.getFreshnessRequirement())) {
+        return bigQueryClient.query(view.getQuery(query));
+    }
+
+    // Fall back to cold storage
+    return hiveClient.query(query.toHiveQL());
+}</code></pre>
+
+        <h3>3. Schema Versioning: Contract-First</h3>
+        <p>With dozens of consumers, schema changes become dangerous. We use a contract-first approach:</p>
+        <ul>
+            <li>Schemas are defined in Protocol Buffers</li>
+            <li>Each schema has a version number</li>
+            <li>The API supports requesting specific schema versions</li>
+            <li>Breaking changes require a new major version; old versions remain supported for a deprecation period</li>
+        </ul>
+        <p>This decouples producers from consumers. A producer can evolve their schema without breaking existing consumers, as long as changes are backward-compatible.</p>
+
+        <h2>Performance Results</h2>
+        <p>After implementing this architecture:</p>
+        <ul>
+            <li><strong>Query costs reduced 40%</strong> — Caching and materialized views eliminated redundant scans</li>
+            <li><strong>End-to-end latency reduced 30%</strong> — Hot path queries hit Redis instead of Hive</li>
+            <li><strong>Consumer onboarding time reduced from weeks to days</strong> — Self-service API with documentation</li>
+        </ul>
+
+        <h2>What I'd Do Differently</h2>
+        <p><strong>Start with fewer tiers.</strong> We built three caching tiers from day one. In retrospect, starting with just hot and cold would have been simpler. We could have added the warm tier when we had clear evidence it was needed.</p>
+        <p><strong>Invest more in observability earlier.</strong> Understanding query patterns is essential for cache tuning. We added comprehensive metrics late and had to make some caching decisions on intuition rather than data.</p>
+        <p><strong>Consider a unified query language.</strong> Supporting both SQL-like queries and filter-based APIs created complexity. A single query interface (even if it compiles to different backends) would have simplified the client experience.</p>
+    </div>
+
+    <footer class="post-footer">
+        <a href="../blog.html">← Back to Writing</a>
+    </footer>
+</article>
+
+<footer class="footer">
+    <p>© 2024 Ankit Garg</p>
+</footer>
+</body>
+</html>

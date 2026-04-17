@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch vs Stream: A Decision Framework - Ankit Garg</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<nav class="nav">
+    <div class="nav-content">
+        <a href="../index.html" class="nav-logo">Ankit Garg</a>
+        <div class="nav-links">
+            <a href="../index.html">About</a>
+            <a href="../blog.html">Writing</a>
+            <a href="../resume.pdf">Resume</a>
+        </div>
+    </div>
+</nav>
+
+<article class="post">
+    <header class="post-header">
+        <h1>Batch vs Stream: A Decision Framework After 15 Years</h1>
+        <time datetime="2024-10">October 2024</time>
+    </header>
+
+    <div class="post-content">
+        <h2>The False Binary</h2>
+        <p>Early in my career, I treated batch and stream as opposing philosophies. Batch was the old way—reliable, simple, slow. Stream was the future—modern, complex, fast.</p>
+        <p>After 15 years, I see them as complementary tools. The question isn't which paradigm is better. It's which constraints matter most for this specific problem.</p>
+
+        <h2>The Framework</h2>
+        <p>I use four dimensions to decide:</p>
+
+        <pre><code>┌─────────────────────────────────────────────────────────────┐
+│                                                              │
+│   Latency Requirement                                        │
+│   ├── < 1 second     → Stream                               │
+│   ├── < 1 hour       → Micro-batch or Stream                │
+│   └── Daily/Weekly   → Batch                                │
+│                                                              │
+│   Completeness Requirement                                   │
+│   ├── Must have all data before processing → Batch          │
+│   └── Can handle late arrivals gracefully  → Stream         │
+│                                                              │
+│   Complexity of Transformation                               │
+│   ├── Simple filters, maps, aggregations   → Either         │
+│   ├── Complex joins across large datasets  → Batch          │
+│   └── Windowed aggregations with state     → Stream         │
+│                                                              │
+│   Operational Maturity                                       │
+│   ├── Team experienced with streaming      → Stream ok      │
+│   └── Team new to streaming                → Start Batch    │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘</code></pre>
+
+        <h2>Real Examples</h2>
+
+        <h3>1. Daily Business Metrics Dashboard</h3>
+        <ul>
+            <li>Latency: Users check it each morning. Daily is fine.</li>
+            <li>Completeness: Must include all of yesterday's data.</li>
+            <li>Complexity: Aggregations across multiple fact tables.</li>
+            <li>Team: Comfortable with Spark batch jobs.</li>
+        </ul>
+        <p><strong>Decision: Batch.</strong> No benefit to streaming here. A well-tuned overnight job is simpler and more reliable.</p>
+
+        <h3>2. Fraud Detection</h3>
+        <ul>
+            <li>Latency: Must flag suspicious transactions in seconds.</li>
+            <li>Completeness: Can't wait for all data—need to act on each event.</li>
+            <li>Complexity: Pattern matching against recent history.</li>
+            <li>Team: Willing to invest in streaming expertise.</li>
+        </ul>
+        <p><strong>Decision: Stream.</strong> Latency requirement makes this non-negotiable.</p>
+
+        <h3>3. Customer 360 Profile</h3>
+        <ul>
+            <li>Latency: Profiles should reflect recent activity within an hour.</li>
+            <li>Completeness: Needs to combine data from 12 source systems.</li>
+            <li>Complexity: Complex joins, deduplication, entity resolution.</li>
+            <li>Team: Mixed experience.</li>
+        </ul>
+        <p><strong>Decision: Lambda architecture.</strong> Batch for comprehensive daily rebuilds. Stream for real-time updates to hot entities. Serving layer merges both views.</p>
+        <p>Yes, Lambda is considered legacy by streaming purists. In practice, it works reliably for this use case with lower operational burden than pure streaming.</p>
+
+        <h2>The Kappa Architecture Dream</h2>
+        <p>The Kappa architecture—everything as a stream, batch as a special case of streaming—is theoretically elegant. Reprocess by replaying the stream. One codebase for both real-time and historical.</p>
+        <p>In practice, I've seen it work well for:</p>
+        <ul>
+            <li>Log processing</li>
+            <li>Event sourcing systems</li>
+            <li>Simpler aggregation pipelines</li>
+        </ul>
+        <p>I've seen it struggle with:</p>
+        <ul>
+            <li>Complex multi-way joins</li>
+            <li>ML feature engineering with large historical windows</li>
+            <li>Teams without deep streaming expertise</li>
+        </ul>
+        <p>The cost of getting Kappa wrong is high. Debugging stateful streaming applications is harder than debugging batch jobs. When a batch job fails, you rerun it. When a streaming job has incorrect state, you're in for archaeology.</p>
+
+        <h2>Technology Choices</h2>
+        <p>My current defaults:</p>
+
+        <table>
+            <thead>
+            <tr>
+                <th>Use Case</th>
+                <th>Technology</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>Batch processing</td>
+                <td>Spark on Kubernetes or managed (Dataproc, EMR, Databricks)</td>
+            </tr>
+            <tr>
+                <td>Stream processing</td>
+                <td>Kafka Streams for simpler cases, Flink for complex stateful processing</td>
+            </tr>
+            <tr>
+                <td>Micro-batch</td>
+                <td>Spark Structured Streaming</td>
+            </tr>
+            <tr>
+                <td>Storage</td>
+                <td>Delta Lake or Iceberg (unified batch and stream sink)</td>
+            </tr>
+            </tbody>
+        </table>
+
+        <p><strong>Spark Structured Streaming</strong> deserves special mention. It's not pure streaming—it's micro-batch under the hood. But for many use cases where "real-time" actually means "within a few minutes," it provides streaming semantics with batch-like operational simplicity.</p>
+
+        <pre><code class="language-python"># Spark Structured Streaming example
+df = spark.readStream \
+    .format("kafka") \
+    .option("kafka.bootstrap.servers", "broker:9092") \
+    .option("subscribe", "events") \
+    .load()
+
+processed = df \
+    .selectExpr("CAST(value AS STRING) as json") \
+    .select(from_json("json", schema).alias("data")) \
+    .select("data.*") \
+    .withWatermark("event_time", "10 minutes") \
+    .groupBy(window("event_time", "5 minutes"), "category") \
+    .agg(count("*").alias("event_count"))
+
+processed.writeStream \
+    .format("delta") \
+    .outputMode("append") \
+    .option("checkpointLocation", "/checkpoints/events") \
+    .start("/delta/event_aggregates")</code></pre>
+
+        <h2>What I've Learned</h2>
+        <ol>
+            <li><strong>Latency requirements are often negotiable.</strong> When stakeholders say "real-time," ask what they actually need. Often "within 15 minutes" satisfies the business need and dramatically simplifies the architecture.</li>
+            <li><strong>Operational cost matters more than theoretical elegance.</strong> A batch job that runs reliably for years beats a streaming job that needs constant babysitting.</li>
+            <li><strong>Start simpler, evolve when needed.</strong> Build batch first. If latency requirements genuinely can't be met, add streaming for that specific path. Don't stream everything because it's modern.</li>
+            <li><strong>Unified storage layers change the game.</strong> Delta Lake and Iceberg allow batch and stream to write to the same tables with ACID guarantees. This makes hybrid architectures much cleaner than they used to be.</li>
+            <li><strong>The best architecture is the one your team can operate.</strong> A theoretically superior design that your team struggles to debug and maintain is worse than a simpler design they understand deeply.</li>
+        </ol>
+    </div>
+
+    <footer class="post-footer">
+        <a href="../blog.html">← Back to Writing</a>
+    </footer>
+</article>
+
+<footer class="footer">
+    <p>© 2024 Ankit Garg</p>
+</footer>
+</body>
+</html>
