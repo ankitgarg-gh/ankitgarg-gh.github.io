@@ -3,103 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ankit Garg - Staff Data Platform Engineer</title>
-    <meta name="description" content="Staff Data Platform Engineer specializing in billion-scale data systems, real-time pipelines, and AI infrastructure.">
+    <title>Data Infrastructure Notes</title>
+    <meta name="description" content="Technical writing on distributed systems, data platforms, and engineering architecture.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <nav class="nav">
     <div class="nav-content">
-        <a href="index.html" class="nav-logo">Ankit Garg</a>
+        <a href="index.html" class="nav-logo">
+            <span class="logo-icon">DI</span>
+            Data Infrastructure Notes
+        </a>
         <div class="nav-links">
-            <a href="index.html" class="active">About</a>
-            <a href="blog.html">Writing</a>
+            <a href="index.html" class="active">Posts</a>
+            <a href="about.html">About</a>
         </div>
     </div>
 </nav>
 
 <main class="main">
     <section class="hero">
-        <h1>Ankit Garg</h1>
-        <p class="subtitle">Staff Data Platform Engineer</p>
-        <p class="tagline">Building data infrastructure at billion-event scale</p>
+        <h1>Data Infrastructure <span class="gradient-text">Notes</span></h1>
+        <p class="tagline">Technical deep-dives on distributed systems, real-time pipelines, and data platform architecture.</p>
     </section>
 
-    <section class="about">
-        <h2>About</h2>
-        <p>I'm a data platform engineer with 15 years of experience building distributed systems that process billions of events daily. Currently at Walmart, previously at UBS.</p>
-        <p>My work spans three domains:</p>
-        <ul>
-            <li><strong>Massive-scale data platforms</strong> — Designing Data-as-a-Service layers using containerized microservices on GKE, serving 5B+ daily events via REST and gRPC APIs</li>
-            <li><strong>Regulated finance infrastructure</strong> — Building real-time pipelines with strict audit requirements, exactly-once semantics, and FINRA compliance</li>
-            <li><strong>AI/ML infrastructure</strong> — Implementing RAG systems, vector databases, and agentic AI patterns for production workloads</li>
+    <section class="posts-section">
+        <h2><span class="section-icon">📝</span> Recent Posts</h2>
+        <ul class="posts">
+            <li>
+                <a href="posts/daas-billion-scale.html">Designing a Data-as-a-Service Layer for Billion-Scale Events</a>
+                <time>March 2025</time>
+                <p>Architecture patterns for exposing petabyte-scale data through containerized microservices with sub-second latency.</p>
+                <div class="post-tags">
+                    <span class="tag tag-blue">GKE</span>
+                    <span class="tag tag-purple">gRPC</span>
+                    <span class="tag tag-green">Caching</span>
+                </div>
+            </li>
+            <li>
+                <a href="posts/regulated-pipelines.html">Real-Time Pipelines in Regulated Industries</a>
+                <time>February 2025</time>
+                <p>Building streaming infrastructure with immutable audit trails, exactly-once semantics, and compliance requirements.</p>
+                <div class="post-tags">
+                    <span class="tag tag-orange">Compliance</span>
+                    <span class="tag tag-blue">Kafka</span>
+                    <span class="tag tag-purple">Delta Lake</span>
+                </div>
+            </li>
+            <li>
+                <a href="posts/batch-vs-stream.html">Batch vs Stream: A Decision Framework</a>
+                <time>January 2025</time>
+                <p>A practical matrix for choosing between Spark Batch, Flink, and Structured Streaming based on latency, completeness, and operational maturity.</p>
+                <div class="post-tags">
+                    <span class="tag tag-green">Spark</span>
+                    <span class="tag tag-blue">Flink</span>
+                    <span class="tag tag-purple">Architecture</span>
+                </div>
+            </li>
         </ul>
-    </section>
-
-    <section class="experience">
-        <h2>Experience</h2>
-
-        <div class="job">
-            <div class="job-header">
-                <h3>Senior Data Engineer</h3>
-                <span class="company">Walmart</span>
-                <span class="date">2023 — Present</span>
-            </div>
-            <p>Designed a Data-as-a-Service layer using containerized microservices (GKE, Docker, Spring Boot) to expose Hive/GCS data via REST/gRPC APIs. Reduced query costs by 40% and end-to-end latency by 30% for 5B daily events.</p>
-        </div>
-
-        <div class="job">
-            <div class="job-header">
-                <h3>Associate Director, Data Engineering</h3>
-                <span class="company">UBS / EPAM Systems</span>
-                <span class="date">2018 — 2023</span>
-            </div>
-            <p>Architected real-time pipeline on Azure Databricks and Delta Lake with Kafka, processing 15M daily transactions with 70% latency reduction. Built FINRA-compliant REST APIs using Java/Spring Boot and Cassandra.</p>
-        </div>
-
-        <div class="job">
-            <div class="job-header">
-                <h3>Senior Software Engineer</h3>
-                <span class="company">Persistent Systems</span>
-                <span class="date">2013 — 2018</span>
-            </div>
-            <p>Developed high-throughput data ingestion systems processing 500GB/day with automated recovery mechanisms.</p>
-        </div>
-    </section>
-
-    <section class="skills">
-        <h2>Technical Focus</h2>
-        <div class="skill-grid">
-            <div class="skill-category">
-                <h3>Cloud & Data</h3>
-                <p>GCP (Dataproc, BigQuery, GKE), Azure (Databricks, ADLS Gen2, Event Hubs), Spark, Kafka, Delta Lake, Cassandra</p>
-            </div>
-            <div class="skill-category">
-                <h3>Software Engineering</h3>
-                <p>Java, Spring Boot, Python, Docker, Kubernetes, REST/gRPC APIs, Microservices</p>
-            </div>
-            <div class="skill-category">
-                <h3>AI Infrastructure</h3>
-                <p>RAG, Vector DBs (Pinecone, Chroma, pgvector), LLM Orchestration, Agentic AI Patterns</p>
-            </div>
-        </div>
-    </section>
-
-    <section class="contact">
-        <h2>Contact</h2>
-        <p>
-            <a href="mailto:er.gargankit08@gmail.com">er.gargankit08@gmail.com</a><br>
-            <a href="https://www.linkedin.com/in/erankitgarg/">LinkedIn</a> ·
-            <a href="https://github.com/ankitgarg-gh">GitHub</a>
-        </p>
     </section>
 </main>
 
 <footer class="footer">
-    <p>© 2026 Ankit Garg</p>
+    <p>© 2026 · Built with curiosity</p>
 </footer>
 </body>
 </html>

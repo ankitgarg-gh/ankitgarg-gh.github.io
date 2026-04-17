@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Designing a Data-as-a-Service Layer - Ankit Garg</title>
+    <title>Designing a Data-as-a-Service Layer - Data Infrastructure Notes</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -13,12 +13,12 @@
 <nav class="nav">
     <div class="nav-content">
         <a href="../index.html" class="nav-logo">
-            <span class="logo-icon">AG</span>
-            Ankit Garg
+            <span class="logo-icon">DI</span>
+            Data Infrastructure Notes
         </a>
         <div class="nav-links">
-            <a href="../index.html">About</a>
-            <a href="../blog.html">Writing</a>
+            <a href="../index.html">Posts</a>
+            <a href="../about.html">About</a>
         </div>
     </div>
 </nav>
@@ -26,7 +26,7 @@
 <article class="post">
     <header class="post-header">
         <h1>Designing a Data-as-a-Service Layer for Billion-Scale Events</h1>
-        <time datetime="2025-12">December 2025</time>
+        <time datetime="2026-03">March 2025</time>
     </header>
 
     <div class="post-content">
@@ -36,7 +36,7 @@
         <p>Data-as-a-Service (DaaS) sits in the middle: a managed API layer that abstracts the underlying storage while providing controlled, efficient access patterns.</p>
 
         <h2>Architecture Overview</h2>
-        <p>The system I'll describe serves approximately 5 billion events per day through a combination of REST and gRPC APIs. The underlying data lives in a combination of Hive tables on GCS and hot data in managed caches.</p>
+        <p>The system described here serves approximately 5 billion events per day through a combination of REST and gRPC APIs. The underlying data lives in a combination of Hive tables on GCS and hot data in managed caches.</p>
 
         <pre><code>┌─────────────────────────────────────────────────────────────┐
 │                      API Gateway                             │
@@ -69,7 +69,7 @@
         </ul>
         <p>We expose both. The Query Service accepts REST requests for point lookups and bounded queries. The Stream Service uses gRPC for consumers that need continuous data feeds.</p>
 
-        <pre><code class="language-protobuf">// Stream service definition
+        <pre><code>// Stream service definition
 service EventStream {
   rpc Subscribe(SubscribeRequest) returns (stream Event);
   rpc GetCheckpoint(CheckpointRequest) returns (Checkpoint);
@@ -82,7 +82,7 @@ message SubscribeRequest {
 }</code></pre>
 
         <h3>2. Caching Strategy: Tiered by Access Pattern</h3>
-        <p>Not all data is accessed equally. We use three tiers:</p>
+        <p>Not all data is accessed equally. Three tiers work well:</p>
         <ul>
             <li><strong>Hot (Redis)</strong>: Last 24 hours, most-accessed entities. Sub-millisecond reads.</li>
             <li><strong>Warm (Materialized Views)</strong>: Pre-aggregated data in BigQuery. Seconds for complex queries.</li>
@@ -90,7 +90,7 @@ message SubscribeRequest {
         </ul>
         <p>The Query Service routes requests to the appropriate tier based on the query pattern and freshness requirements.</p>
 
-        <pre><code class="language-java">public QueryResult executeQuery(Query query) {
+        <pre><code>public QueryResult executeQuery(Query query) {
     // Check if data is in hot cache
     if (isHotQuery(query)) {
         return redisClient.get(query.getCacheKey());
@@ -107,7 +107,7 @@ message SubscribeRequest {
 }</code></pre>
 
         <h3>3. Schema Versioning: Contract-First</h3>
-        <p>With dozens of consumers, schema changes become dangerous. We use a contract-first approach:</p>
+        <p>With dozens of consumers, schema changes become dangerous. A contract-first approach helps:</p>
         <ul>
             <li>Schemas are defined in Protocol Buffers</li>
             <li>Each schema has a version number</li>
@@ -125,18 +125,18 @@ message SubscribeRequest {
         </ul>
 
         <h2>What I'd Do Differently</h2>
-        <p><strong>Start with fewer tiers.</strong> We built three caching tiers from day one. In retrospect, starting with just hot and cold would have been simpler. We could have added the warm tier when we had clear evidence it was needed.</p>
-        <p><strong>Invest more in observability earlier.</strong> Understanding query patterns is essential for cache tuning. We added comprehensive metrics late and had to make some caching decisions on intuition rather than data.</p>
+        <p><strong>Start with fewer tiers.</strong> Building three caching tiers from day one added complexity. In retrospect, starting with just hot and cold would have been simpler. The warm tier could have been added when there was clear evidence it was needed.</p>
+        <p><strong>Invest more in observability earlier.</strong> Understanding query patterns is essential for cache tuning. Comprehensive metrics added late meant some caching decisions were made on intuition rather than data.</p>
         <p><strong>Consider a unified query language.</strong> Supporting both SQL-like queries and filter-based APIs created complexity. A single query interface (even if it compiles to different backends) would have simplified the client experience.</p>
     </div>
 
     <footer class="post-footer">
-        <a href="../blog.html">← Back to Writing</a>
+        <a href="../index.html">← Back to Posts</a>
     </footer>
 </article>
 
 <footer class="footer">
-    <p>Built with ☕ and curiosity · © 2025 Ankit Garg</p>
+    <p>© 2026 · Built with curiosity</p>
 </footer>
 </body>
 </html>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-Time Pipelines in Regulated Industries - Ankit Garg</title>
+    <title>Real-Time Pipelines in Regulated Industries - Data Infrastructure Notes</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -13,12 +13,12 @@
 <nav class="nav">
     <div class="nav-content">
         <a href="../index.html" class="nav-logo">
-            <span class="logo-icon">AG</span>
-            Ankit Garg
+            <span class="logo-icon">DI</span>
+            Data Infrastructure Notes
         </a>
         <div class="nav-links">
-            <a href="../index.html">About</a>
-            <a href="../blog.html">Writing</a>
+            <a href="../index.html">Posts</a>
+            <a href="../about.html">About</a>
         </div>
     </div>
 </nav>
@@ -26,13 +26,13 @@
 <article class="post">
     <header class="post-header">
         <h1>Real-Time Pipelines in Regulated Industries</h1>
-        <time datetime="2025-11">November 2025</time>
+        <time datetime="2026-02">February 2025</time>
     </header>
 
     <div class="post-content">
         <h2>Context</h2>
         <p>Building streaming systems is hard. Building them in regulated finance, healthcare, or government adds constraints that change your architecture fundamentally.</p>
-        <p>I spent five years building real-time data infrastructure in investment banking. The technical challenges were interesting, but the regulatory requirements shaped more decisions than any performance benchmark.</p>
+        <p>This post covers patterns from building real-time data infrastructure in investment banking. The technical challenges were interesting, but the regulatory requirements shaped more decisions than any performance benchmark.</p>
 
         <h2>What Makes Regulated Different</h2>
 
@@ -53,9 +53,9 @@ Event delivered → Log destination, delivery confirmation, timestamp</code></pr
 
         <h3>2. Exactly-Once Matters More</h3>
         <p>In ad-tech, processing an event twice means a slightly inflated count. In finance, processing a transaction twice means real money moves incorrectly.</p>
-        <p>Kafka's exactly-once semantics (EOS) are necessary but not sufficient. Your entire pipeline needs idempotency:</p>
+        <p>Kafka's exactly-once semantics (EOS) are necessary but not sufficient. The entire pipeline needs idempotency:</p>
 
-        <pre><code class="language-java">// Idempotent write pattern
+        <pre><code>// Idempotent write pattern
 public void processTransaction(Transaction txn) {
     String idempotencyKey = txn.getId() + "-" + txn.getVersion();
 
@@ -128,7 +128,7 @@ public void processTransaction(Transaction txn) {
 │              Reporting & Regulatory Feeds                    │
 └─────────────────────────────────────────────────────────────┘</code></pre>
 
-        <p><strong>Delta Lake was the right choice here.</strong> ACID transactions on the lake meant we could handle late arrivals with proper upserts. Time travel meant we could reproduce any historical state for audits. Schema enforcement meant bad data didn't corrupt downstream.</p>
+        <p><strong>Delta Lake was the right choice here.</strong> ACID transactions on the lake meant handling late arrivals with proper upserts. Time travel meant reproducing any historical state for audits. Schema enforcement meant bad data didn't corrupt downstream.</p>
 
         <h2>Latency vs Compliance Tradeoff</h2>
         <p>The business wanted sub-second latency. Compliance wanted bulletproof audit trails. These goals conflict.</p>
@@ -150,12 +150,12 @@ public void processTransaction(Transaction txn) {
     </div>
 
     <footer class="post-footer">
-        <a href="../blog.html">← Back to Writing</a>
+        <a href="../index.html">← Back to Posts</a>
     </footer>
 </article>
 
 <footer class="footer">
-    <p>Built with ☕ and curiosity · © 2025 Ankit Garg</p>
+    <p>© 2026 · Built with curiosity</p>
 </footer>
 </body>
 </html>
